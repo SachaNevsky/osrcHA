@@ -2,7 +2,7 @@
   "name": "osrsha",
   "private": true,
   "type": "module",
-  "homepage": "https://sachanevsky.github.io/osrcHA",
+  "homepage": "https://sachanevsky.github.io/osrsHA",
   "scripts": {
     "build": "react-router build",
     "dev": "react-router dev",
