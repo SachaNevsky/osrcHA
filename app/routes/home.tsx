@@ -13,17 +13,28 @@ const AlchemyCalculator = () => {
 		setLoading(true);
 		setError('');
 		try {
-			const response = await fetch('https://prices.runescape.wiki/api/v1/osrs/latest', {
+			const latest = await fetch('https://prices.runescape.wiki/api/v1/osrs/latest', {
 				headers: {
-					'User-Agent': 'OSRS Alchemy Calculator - claude.ai artifact'
+					'User-Agent': 'OSRS High Alchemy Calculator'
 				}
 			});
 
-			if (!response.ok) {
-				throw new Error(`API returned ${response.status}`);
+			if (!latest.ok) {
+				throw new Error(`API returned ${latest.status}`);
 			}
 
-			const data = await response.json();
+			const recent = await fetch('https://prices.runescape.wiki/api/v1/osrs/1h', {
+				headers: {
+					'User-Agent': 'OSRS High Alchemy Calculator'
+				}
+			});
+
+			if (!recent.ok) {
+				throw new Error(`API returned ${recent.status}`);
+			}
+
+			const data = await latest.json();
+			const recentData = await recent.json();
 
 			if (data.data && data.data['561'] && data.data['561'].high) {
 				setNatureRunePrice(data.data['561'].high);
@@ -33,14 +44,20 @@ const AlchemyCalculator = () => {
 			const enrichedItems = ITEMS_DATA.map(item => {
 				const priceData = data.data?.[item.id];
 				const buyPrice = priceData?.high || 0;
+				const recentBuyPrice = recentData.data?.[item.id]?.avgHighPrice || 0;
 				const profit = buyPrice > 0 ? item.highAlch - buyPrice - currentNatPrice : 0;
-				const profitPerLimit = profit * item.limit;
+				// const profitPerLimit = profit * (item.limit > 4800 ? 4800 : item.limit);
+				const profitPerMinute = profit * 20;
+				const profitPerHour = profit * (item.limit > 1200 ? 1200 : item.limit);
 
 				return {
 					...item,
 					buyPrice,
+					recentBuyPrice,
 					profit,
-					profitPerLimit
+					// profitPerLimit,
+					profitPerMinute,
+					profitPerHour
 				};
 			});
 
@@ -52,8 +69,11 @@ const AlchemyCalculator = () => {
 			const enrichedItems = ITEMS_DATA.map(item => ({
 				...item,
 				buyPrice: 0,
+				recentBuyPrice: 0,
 				profit: 0,
-				profitPerLimit: 0
+				// profitPerLimit: 0,
+				profitPerMinute: 0,
+				profitPerHour: 0
 			}));
 			setItems(enrichedItems);
 		} finally {
@@ -65,8 +85,11 @@ const AlchemyCalculator = () => {
 		const initialItems = ITEMS_DATA.map(item => ({
 			...item,
 			buyPrice: 0,
+			recentBuyPrice: 0,
 			profit: 0,
-			profitPerLimit: 0
+			// profitPerLimit: 0,
+			profitPerMinute: 0,
+			profitPerHour: 0
 		}));
 		setItems(initialItems);
 
@@ -160,27 +183,15 @@ const AlchemyCalculator = () => {
 								</th>
 								<th
 									className="px-4 py-3 text-right cursor-pointer hover:bg-gray-600"
-									onClick={() => handleSort('highAlch')}
-								>
-									High Alch{getSortIndicator('highAlch')}
-								</th>
-								<th
-									className="px-4 py-3 text-right cursor-pointer hover:bg-gray-600"
 									onClick={() => handleSort('buyPrice')}
 								>
 									Buy Price{getSortIndicator('buyPrice')}
 								</th>
 								<th
 									className="px-4 py-3 text-right cursor-pointer hover:bg-gray-600"
-									onClick={() => handleSort('limit')}
+									onClick={() => handleSort('highAlch')}
 								>
-									Limit{getSortIndicator('limit')}
-								</th>
-								<th
-									className="px-4 py-3 text-center cursor-pointer hover:bg-gray-600"
-									onClick={() => handleSort('members')}
-								>
-									Members{getSortIndicator('members')}
+									High Alch{getSortIndicator('highAlch')}
 								</th>
 								<th
 									className="px-4 py-3 text-right cursor-pointer hover:bg-gray-600"
@@ -190,9 +201,33 @@ const AlchemyCalculator = () => {
 								</th>
 								<th
 									className="px-4 py-3 text-right cursor-pointer hover:bg-gray-600"
+									onClick={() => handleSort('limit')}
+								>
+									Limit{getSortIndicator('limit')}
+								</th>
+								{/* <th
+									className="px-4 py-3 text-center cursor-pointer hover:bg-gray-600"
+									onClick={() => handleSort('members')}
+								>
+									Members{getSortIndicator('members')}
+								</th> */}
+								{/* <th
+									className="px-4 py-3 text-right cursor-pointer hover:bg-gray-600"
 									onClick={() => handleSort('profitPerLimit')}
 								>
 									Profit/Limit{getSortIndicator('profitPerLimit')}
+								</th> */}
+								<th
+									className="px-4 py-3 text-right cursor-pointer hover:bg-gray-600"
+									onClick={() => handleSort('profitPerMinute')}
+								>
+									Profit/minute{getSortIndicator('profitPerMinute')}
+								</th>
+								<th
+									className="px-4 py-3 text-right cursor-pointer hover:bg-gray-600"
+									onClick={() => handleSort('profitPerHour')}
+								>
+									Profit/hour{getSortIndicator('profitPerHour')}
 								</th>
 							</tr>
 						</thead>
@@ -203,25 +238,41 @@ const AlchemyCalculator = () => {
 									className={`border-t border-gray-700 ${idx % 2 === 0 ? 'bg-gray-800' : 'bg-gray-750'} hover:bg-gray-700`}
 								>
 									<td className="px-4 py-2">
+										{item.members ? (
+											<img
+												src="https://oldschool.runescape.wiki/images/Member_icon.png"
+												alt="OSRS Member star"
+												className="inline-block align-middle w-4 h-4"
+											/>
+										) : (
+											<img
+												src="https://oldschool.runescape.wiki/images/Free-to-play_icon.png"
+												alt="OSRS F2P star"
+												className="inline-block align-middle w-4 h-4"
+											/>
+										)}
 										<a
 											href={`https://prices.runescape.wiki/osrs/item/${item.id}`}
 											target="_blank"
 											rel="noopener noreferrer"
-											className="text-blue-400 hover:text-blue-300 underline"
+											className="text-blue-400 hover:text-blue-300 underline pl-2"
 										>
 											{item.name}
 										</a>
 									</td>
-									<td className="px-4 py-2 text-right text-yellow-300">
-										{formatNumber(item.highAlch)}
-									</td>
 									<td className="px-4 py-2 text-right">
-										{item.buyPrice ? formatNumber(item.buyPrice) : 'N/A'}
+										<b>{item.buyPrice ? formatNumber(item.buyPrice) : 'N/A'}</b> (<span className={`${item.buyPrice < item.recentBuyPrice ? "text-green-400" : item.buyPrice === item.recentBuyPrice ? "" : "text-red-400"}`}>{item.buyPrice <= item.recentBuyPrice ? "" : "+"}{formatNumber(item.buyPrice - item.recentBuyPrice)}</span>)
+									</td>
+									<td className="px-4 py-2 text-right text-yellow-300">
+										<b>{formatNumber(item.highAlch)}</b>
+									</td>
+									<td className={`px-4 py-2 text-right font-bold ${item.profit > 0 ? 'text-green-400' : 'text-red-400'}`}>
+										<b>{item.buyPrice ? formatNumber(item.profit) : 'N/A'}</b>
 									</td>
 									<td className="px-4 py-2 text-right">
 										{formatNumber(item.limit)}
 									</td>
-									<td className="px-4 py-2 text-center">
+									{/* <td className="px-4 py-2 text-center">
 										{item.members ? (
 											<img
 												src="https://oldschool.runescape.wiki/images/Member_icon.png"
@@ -235,12 +286,15 @@ const AlchemyCalculator = () => {
 												className="mx-auto block"
 											/>
 										)}
-									</td>
-									<td className={`px-4 py-2 text-right font-bold ${item.profit > 0 ? 'text-green-400' : 'text-red-400'}`}>
-										{item.buyPrice ? formatNumber(item.profit) : 'N/A'}
-									</td>
-									<td className={`px-4 py-2 text-right font-bold ${item.profitPerLimit > 0 ? 'text-green-400' : 'text-red-400'}`}>
+									</td> */}
+									{/* <td className={`px-4 py-2 text-right font-bold ${item.profitPerLimit > 0 ? 'text-green-400' : 'text-red-400'}`}>
 										{item.buyPrice ? formatNumber(item.profitPerLimit) : 'N/A'}
+									</td> */}
+									<td className={`px-4 py-2 text-right font-bold ${item.profitPerMinute > 0 ? 'text-green-400' : 'text-red-400'}`}>
+										{item.buyPrice ? formatNumber(item.profitPerMinute) : 'N/A'}
+									</td>
+									<td className={`px-4 py-2 text-right font-bold ${item.profitPerHour > 0 ? 'text-green-400' : 'text-red-400'}`}>
+										{item.buyPrice ? formatNumber(item.profitPerHour) : 'N/A'}
 									</td>
 								</tr>
 							))}
@@ -250,7 +304,6 @@ const AlchemyCalculator = () => {
 
 				<div className="mt-4 text-center text-sm text-gray-400">
 					<p>Prices fetched from <a href="https://prices.runescape.wiki" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">prices.runescape.wiki</a></p>
-					<p>Click column headers to sort. Click item names to view price history.</p>
 				</div>
 			</div>
 		</div>
