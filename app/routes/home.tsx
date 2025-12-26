@@ -98,9 +98,9 @@ const AlchemyCalculator = () => {
 	}, []);
 
 	const handleSort = (key: string) => {
-		let direction = 'asc';
-		if (sortConfig.key === key && sortConfig.direction === 'asc') {
-			direction = 'desc';
+		let direction = 'desc';
+		if (sortConfig.key === key && sortConfig.direction === 'desc') {
+			direction = 'asc';
 		}
 		setSortConfig({ key, direction });
 	};
