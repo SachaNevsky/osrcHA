@@ -161,7 +161,7 @@ const AlchemyCalculator = () => {
 						<span>Show Members Items</span>
 					</label>
 
-					<div className="text-sm">
+					<div>
 						Nature Rune Price: <span className="font-bold text-yellow-400">{natureRunePrice} gp</span>
 					</div>
 				</div>
@@ -258,9 +258,22 @@ const AlchemyCalculator = () => {
 									<td className="px-4 py-2 text-right">
 										<Tooltip
 											title={
-												<>1h average:<span className="text-yellow-300 font-bold pl-2">{formatNumber(item.recentBuyPrice)}</span></>
+												<span>
+													1h average: <span className="text-yellow-300 font-bold pl-1">{formatNumber(item.recentBuyPrice)}</span>
+												</span>
 											}>
-											<b className="text-yellow-300 font-bold">{item.buyPrice ? formatNumber(item.buyPrice) : 'N/A'}</b> (<span className={`${item.buyPrice < item.recentBuyPrice ? "text-green-400" : item.buyPrice === item.recentBuyPrice ? "" : "text-red-400"}`}>{item.buyPrice <= item.recentBuyPrice ? "" : "+"}{formatNumber(item.buyPrice - item.recentBuyPrice)}</span>)
+											{/* <b className="text-yellow-300 font-bold">{item.buyPrice ? formatNumber(item.buyPrice) : 'N/A'}</b> (<span className={`${item.buyPrice < item.recentBuyPrice ? "text-green-400" : item.buyPrice === item.recentBuyPrice ? "" : "text-red-400"}`}>{item.buyPrice <= item.recentBuyPrice ? "" : "+"}{formatNumber(item.buyPrice - item.recentBuyPrice)}</span>) */}
+											<div className="flex gap-1 justify-end">
+												<b className="text-yellow-300 font-bold text-right w-16">
+													{item.buyPrice ? formatNumber(item.buyPrice) : 'N/A'}
+												</b>
+												<span className="w-14 text-left">
+													(<span className={`${item.buyPrice < item.recentBuyPrice ? "text-green-400" : item.buyPrice === item.recentBuyPrice ? "" : "text-red-400"}`}>
+														{item.buyPrice <= item.recentBuyPrice ? "" : "+"}
+														{formatNumber(item.buyPrice - item.recentBuyPrice)}
+													</span>)
+												</span>
+											</div>
 										</Tooltip>
 									</td>
 									<td className="px-4 py-2 text-right text-yellow-300">
@@ -280,7 +293,9 @@ const AlchemyCalculator = () => {
 									<td className="px-4 py-2 text-right">
 										<Tooltip
 											title={
-												<span className="text-yellow-300 font-bold">{formatNumber(item.limit * item.buyPrice)} gp</span>
+												<span>
+													Cost:<span className="text-yellow-300 font-bold pl-1">{formatNumber(item.limit * item.buyPrice)} gp</span>
+												</span>
 											}
 										>
 											{formatNumber(item.limit)}
@@ -293,6 +308,9 @@ const AlchemyCalculator = () => {
 													<span className="text-yellow-300 font-bold">{item.profit} gp</span>
 													<span className="px-2">x</span>
 													<span className="font-bold">{item.limit > 20 ? 20 : item.limit}</span>
+													<br />
+													<span className="pr-1">Cost:</span>
+													<span className="text-yellow-300 font-bold">{item.limit > 20 ? formatNumber(item.buyPrice * 20) : formatNumber(item.buyPrice * item.limit)} gp</span>
 												</span>
 											}
 										>
@@ -306,6 +324,9 @@ const AlchemyCalculator = () => {
 													<span className="text-yellow-300 font-bold">{item.profit} gp</span>
 													<span className="px-2">x</span>
 													<span className="font-bold">{item.limit > 1200 ? 1200 : item.limit}</span>
+													<br />
+													<span className="pr-1">Cost:</span>
+													<span className="text-yellow-300 font-bold">{item.limit > 1200 ? formatNumber(item.buyPrice * 1200) : formatNumber(item.buyPrice * item.limit)} gp</span>
 												</span>
 											}
 										>
@@ -319,6 +340,9 @@ const AlchemyCalculator = () => {
 													<span className="text-yellow-300 font-bold">{item.profit} gp</span>
 													<span className="px-2">x</span>
 													<span className="font-bold">{item.limit > 4800 ? "4,800" : item.limit}</span>
+													<br />
+													<span className="pr-1">Cost:</span>
+													<span className="text-yellow-300 font-bold">{item.limit > 4800 ? formatNumber(item.buyPrice * 4800) : formatNumber(item.buyPrice * item.limit)} gp</span>
 												</span>
 											}
 										>
