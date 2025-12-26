@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import ITEMS_DATA from "../data/items.json";
+import { Tooltip } from '@mui/material';
 
 const AlchemyCalculator = () => {
 	const [items, setItems] = useState([]);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState('');
-	const [sortConfig, setSortConfig] = useState({ key: 'profit', direction: 'desc' });
+	const [sortConfig, setSortConfig] = useState({ key: 'profitPerHour', direction: 'desc' });
 	const [showMembers, setShowMembers] = useState(false);
 	const [natureRunePrice, setNatureRunePrice] = useState(85);
 
@@ -46,18 +47,18 @@ const AlchemyCalculator = () => {
 				const buyPrice = priceData?.high || 0;
 				const recentBuyPrice = recentData.data?.[item.id]?.avgHighPrice || 0;
 				const profit = buyPrice > 0 ? item.highAlch - buyPrice - currentNatPrice : 0;
-				// const profitPerLimit = profit * (item.limit > 4800 ? 4800 : item.limit);
 				const profitPerMinute = profit * 20;
 				const profitPerHour = profit * (item.limit > 1200 ? 1200 : item.limit);
+				const profitPerLimit = profit * (item.limit > 4800 ? 4800 : item.limit);
 
 				return {
 					...item,
 					buyPrice,
 					recentBuyPrice,
 					profit,
-					// profitPerLimit,
 					profitPerMinute,
-					profitPerHour
+					profitPerHour,
+					profitPerLimit
 				};
 			});
 
@@ -71,9 +72,9 @@ const AlchemyCalculator = () => {
 				buyPrice: 0,
 				recentBuyPrice: 0,
 				profit: 0,
-				// profitPerLimit: 0,
 				profitPerMinute: 0,
-				profitPerHour: 0
+				profitPerHour: 0,
+				profitPerLimit: 0
 			}));
 			setItems(enrichedItems);
 		} finally {
@@ -87,9 +88,9 @@ const AlchemyCalculator = () => {
 			buyPrice: 0,
 			recentBuyPrice: 0,
 			profit: 0,
-			// profitPerLimit: 0,
 			profitPerMinute: 0,
-			profitPerHour: 0
+			profitPerHour: 0,
+			profitPerLimit: 0
 		}));
 		setItems(initialItems);
 
@@ -205,18 +206,6 @@ const AlchemyCalculator = () => {
 								>
 									Limit{getSortIndicator('limit')}
 								</th>
-								{/* <th
-									className="px-4 py-3 text-center cursor-pointer hover:bg-gray-600"
-									onClick={() => handleSort('members')}
-								>
-									Members{getSortIndicator('members')}
-								</th> */}
-								{/* <th
-									className="px-4 py-3 text-right cursor-pointer hover:bg-gray-600"
-									onClick={() => handleSort('profitPerLimit')}
-								>
-									Profit/Limit{getSortIndicator('profitPerLimit')}
-								</th> */}
 								<th
 									className="px-4 py-3 text-right cursor-pointer hover:bg-gray-600"
 									onClick={() => handleSort('profitPerMinute')}
@@ -228,6 +217,12 @@ const AlchemyCalculator = () => {
 									onClick={() => handleSort('profitPerHour')}
 								>
 									Profit/hour{getSortIndicator('profitPerHour')}
+								</th>
+								<th
+									className="px-4 py-3 text-right cursor-pointer hover:bg-gray-600"
+									onClick={() => handleSort('profitPerLimit')}
+								>
+									Profit/limit{getSortIndicator('profitPerLimit')}
 								</th>
 							</tr>
 						</thead>
@@ -261,40 +256,74 @@ const AlchemyCalculator = () => {
 										</a>
 									</td>
 									<td className="px-4 py-2 text-right">
-										<b>{item.buyPrice ? formatNumber(item.buyPrice) : 'N/A'}</b> (<span className={`${item.buyPrice < item.recentBuyPrice ? "text-green-400" : item.buyPrice === item.recentBuyPrice ? "" : "text-red-400"}`}>{item.buyPrice <= item.recentBuyPrice ? "" : "+"}{formatNumber(item.buyPrice - item.recentBuyPrice)}</span>)
+										<Tooltip
+											title={
+												<>1h average:<span className="text-yellow-300 font-bold pl-2">{formatNumber(item.recentBuyPrice)}</span></>
+											}>
+											<b className="text-yellow-300 font-bold">{item.buyPrice ? formatNumber(item.buyPrice) : 'N/A'}</b> (<span className={`${item.buyPrice < item.recentBuyPrice ? "text-green-400" : item.buyPrice === item.recentBuyPrice ? "" : "text-red-400"}`}>{item.buyPrice <= item.recentBuyPrice ? "" : "+"}{formatNumber(item.buyPrice - item.recentBuyPrice)}</span>)
+										</Tooltip>
 									</td>
 									<td className="px-4 py-2 text-right text-yellow-300">
 										<b>{formatNumber(item.highAlch)}</b>
 									</td>
 									<td className={`px-4 py-2 text-right font-bold ${item.profit > 0 ? 'text-green-400' : 'text-red-400'}`}>
-										<b>{item.buyPrice ? formatNumber(item.profit) : 'N/A'}</b>
+										<Tooltip
+											title={
+												<>
+													<span className="text-yellow-300 font-bold">{formatNumber(item.highAlch)}</span> - (<span className="text-yellow-300 font-bold">{formatNumber(item.buyPrice)}</span> + <span className="text-yellow-300 font-bold">{formatNumber(natureRunePrice)}</span>)
+												</>
+											}
+										>
+											<b>{item.buyPrice ? formatNumber(item.profit) : 'N/A'}</b>
+										</Tooltip>
 									</td>
 									<td className="px-4 py-2 text-right">
-										{formatNumber(item.limit)}
+										<Tooltip
+											title={
+												<span className="text-yellow-300 font-bold">{formatNumber(item.limit * item.buyPrice)} gp</span>
+											}
+										>
+											{formatNumber(item.limit)}
+										</Tooltip>
 									</td>
-									{/* <td className="px-4 py-2 text-center">
-										{item.members ? (
-											<img
-												src="https://oldschool.runescape.wiki/images/Member_icon.png"
-												alt="OSRS Member star"
-												className="mx-auto block"
-											/>
-										) : (
-											<img
-												src="https://oldschool.runescape.wiki/images/Free-to-play_icon.png"
-												alt="OSRS F2P star"
-												className="mx-auto block"
-											/>
-										)}
-									</td> */}
-									{/* <td className={`px-4 py-2 text-right font-bold ${item.profitPerLimit > 0 ? 'text-green-400' : 'text-red-400'}`}>
-										{item.buyPrice ? formatNumber(item.profitPerLimit) : 'N/A'}
-									</td> */}
 									<td className={`px-4 py-2 text-right font-bold ${item.profitPerMinute > 0 ? 'text-green-400' : 'text-red-400'}`}>
-										{item.buyPrice ? formatNumber(item.profitPerMinute) : 'N/A'}
+										<Tooltip
+											title={
+												<span>
+													<span className="text-yellow-300 font-bold">{item.profit} gp</span>
+													<span className="px-2">x</span>
+													<span className="font-bold">{item.limit > 20 ? 20 : item.limit}</span>
+												</span>
+											}
+										>
+											{item.buyPrice ? formatNumber(item.profitPerMinute) : 'N/A'}
+										</Tooltip>
 									</td>
 									<td className={`px-4 py-2 text-right font-bold ${item.profitPerHour > 0 ? 'text-green-400' : 'text-red-400'}`}>
-										{item.buyPrice ? formatNumber(item.profitPerHour) : 'N/A'}
+										<Tooltip
+											title={
+												<span>
+													<span className="text-yellow-300 font-bold">{item.profit} gp</span>
+													<span className="px-2">x</span>
+													<span className="font-bold">{item.limit > 1200 ? 1200 : item.limit}</span>
+												</span>
+											}
+										>
+											{item.buyPrice ? formatNumber(item.profitPerHour) : 'N/A'}
+										</Tooltip>
+									</td>
+									<td className={`px-4 py-2 text-right font-bold ${item.profitPerLimit > 0 ? 'text-green-400' : 'text-red-400'}`}>
+										<Tooltip
+											title={
+												<span>
+													<span className="text-yellow-300 font-bold">{item.profit} gp</span>
+													<span className="px-2">x</span>
+													<span className="font-bold">{item.limit > 4800 ? "4,800" : item.limit}</span>
+												</span>
+											}
+										>
+											{item.buyPrice ? formatNumber(item.profitPerLimit) : 'N/A'}
+										</Tooltip>
 									</td>
 								</tr>
 							))}
