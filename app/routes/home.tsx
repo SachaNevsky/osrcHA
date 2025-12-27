@@ -9,6 +9,7 @@ const AlchemyCalculator = () => {
 	const [sortConfig, setSortConfig] = useState({ key: 'profitPerHour', direction: 'desc' });
 	const [showMembers, setShowMembers] = useState(false);
 	const [natureRunePrice, setNatureRunePrice] = useState(85);
+	const [investmentInput, setInvestmentInput] = useState('');
 
 	const fetchPrices = async () => {
 		setLoading(true);
@@ -137,6 +138,74 @@ const AlchemyCalculator = () => {
 		return num.toLocaleString();
 	};
 
+	const formatAlchTime = (quantity: number) => {
+		const totalSeconds = quantity * 3;
+		const totalMinutes = Math.ceil(totalSeconds / 60);
+		const hours = Math.floor(totalMinutes / 60);
+		const minutes = totalMinutes % 60;
+
+		if (hours > 0) {
+			return `${hours}h${minutes}m`;
+		} else {
+			return `${minutes}m`;
+		}
+	};
+
+	const parseOSRSNotation = (input: string): number => {
+		if (!input) return 0;
+		const cleaned = input.trim().toLowerCase().replace(/,/g, '');
+
+		const match = cleaned.match(/^(\d+\.?\d*)\s*([kmb]?)$/);
+		if (!match) return 0;
+
+		const [, numStr, suffix] = match;
+		const num = parseFloat(numStr);
+
+		const multipliers: { [key: string]: number } = {
+			'k': 1000,
+			'm': 1000000,
+			'b': 1000000000,
+			'': 1
+		};
+
+		return Math.floor(num * (multipliers[suffix] || 1));
+	};
+
+	const calculateBestInvestments = () => {
+		const coins = parseOSRSNotation(investmentInput);
+		if (coins <= 0 || sortedItems.length === 0) return [];
+
+		const profitableItems = sortedItems
+			.filter(item => item.profit > 0 && item.buyPrice > 0)
+			.map(item => {
+				const costPerItem = item.buyPrice + natureRunePrice;
+				// 4-hour limit is the item's buy limit every 4 hours, capped at 4800
+				const fourHourLimit = Math.min(item.limit, 4800);
+				// How many can we afford?
+				const maxQuantity = Math.floor(coins / costPerItem);
+				// Take the minimum of what we can afford and the 4-hour limit
+				const actualQuantity = Math.min(maxQuantity, fourHourLimit);
+				const totalProfit = item.profit * actualQuantity;
+				const totalCost = costPerItem * actualQuantity;
+				const totalRevenue = item.highAlch * actualQuantity;
+
+				return {
+					...item,
+					investQuantity: actualQuantity,
+					investProfit: totalProfit,
+					investCost: totalCost,
+					investRevenue: totalRevenue,
+					fourHourLimit: fourHourLimit
+				};
+			})
+			.filter(item => item.investQuantity > 0)
+			.sort((a, b) => b.investProfit - a.investProfit);
+
+		return profitableItems.slice(0, 3);
+	};
+
+	const topInvestments = calculateBestInvestments();
+
 	return (
 		<div className="min-h-screen bg-gray-900 text-gray-100 p-4">
 			<div className="max-w-7xl mx-auto">
@@ -162,7 +231,7 @@ const AlchemyCalculator = () => {
 					</label>
 
 					<div>
-						Nature Rune Price: <span className="font-bold text-yellow-400">{natureRunePrice} gp</span>
+						Nature Rune Price: <a href="https://prices.runescape.wiki/osrs/item/561" target="_blank" rel="noopener noreferrer" className="font-bold text-yellow-400 hover:text-yellow-300 underline">{natureRunePrice} gp</a>
 					</div>
 				</div>
 
@@ -171,6 +240,67 @@ const AlchemyCalculator = () => {
 						<strong>Note:</strong> {error}
 					</div>
 				)}
+
+				<div className="mb-4 p-4 bg-gray-800 rounded-lg border border-gray-700">
+					<div className="flex gap-4 items-center flex-wrap">
+						<label className="flex items-center gap-2">
+							<span className="font-semibold">Investment:</span>
+							<input
+								type="text"
+								value={investmentInput}
+								onChange={(e) => setInvestmentInput(e.target.value)}
+								placeholder="e.g. 1285k, 5m, 100b"
+								className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-gray-100 focus:outline-none focus:border-blue-500 w-48"
+							/>
+						</label>
+						{topInvestments.length > 0 && (
+							<>
+								{topInvestments.map((investment, index) => (
+									<div key={investment.id} className="flex items-center gap-2">
+										<span className="text-gray-400">#{index + 1}</span>
+										<Tooltip
+											title={
+												<span>
+													<span className="pr-1">Total cost:</span>
+													<span className="text-yellow-300 font-bold">{formatNumber(investment.investCost)} gp</span>
+													<br />
+													<span className="pr-1">Total revenue:</span>
+													<span className="text-yellow-300 font-bold">{formatNumber(investment.investRevenue)} gp</span>
+													<br />
+													<span className="pr-1">Time:</span>
+													<span className="text-yellow-300 font-bold">~{formatAlchTime(investment.investQuantity)}</span>
+												</span>
+											}
+										>
+											<span>
+												<span className="text-white font-bold">{formatNumber(investment.investQuantity)}</span>
+												<span className="text-white">x</span>
+												{' '}
+												<a
+													href={`https://prices.runescape.wiki/osrs/item/${investment.id}`}
+													target="_blank"
+													rel="noopener noreferrer"
+													className="text-blue-400 hover:text-blue-300 underline"
+												>
+													{investment.name}
+												</a>
+												{' '}
+												<span className="text-white font-bold">
+													(<span className={investment.investProfit > 0 ? 'text-green-400' : 'text-red-400'}>
+														{investment.investProfit > 0 ? '+' : ''}{formatNumber(investment.investProfit)}
+													</span>)
+												</span>
+											</span>
+										</Tooltip>
+									</div>
+								))}
+							</>
+						)}
+						{investmentInput && topInvestments.length === 0 && (
+							<span className="text-gray-400">No profitable items found for this amount</span>
+						)}
+					</div>
+				</div>
 
 				<div className="overflow-x-auto bg-gray-800 rounded-lg shadow-lg">
 					<table className="w-full text-sm">
@@ -262,7 +392,6 @@ const AlchemyCalculator = () => {
 													1h average: <span className="text-yellow-300 font-bold pl-1">{formatNumber(item.recentBuyPrice)}</span>
 												</span>
 											}>
-											{/* <b className="text-yellow-300 font-bold">{item.buyPrice ? formatNumber(item.buyPrice) : 'N/A'}</b> (<span className={`${item.buyPrice < item.recentBuyPrice ? "text-green-400" : item.buyPrice === item.recentBuyPrice ? "" : "text-red-400"}`}>{item.buyPrice <= item.recentBuyPrice ? "" : "+"}{formatNumber(item.buyPrice - item.recentBuyPrice)}</span>) */}
 											<div className="flex gap-1 justify-end">
 												<b className="text-yellow-300 font-bold text-right w-16">
 													{item.buyPrice ? formatNumber(item.buyPrice) : 'N/A'}
@@ -311,6 +440,9 @@ const AlchemyCalculator = () => {
 													<br />
 													<span className="pr-1">Cost:</span>
 													<span className="text-yellow-300 font-bold">{item.limit > 20 ? formatNumber(item.buyPrice * 20) : formatNumber(item.buyPrice * item.limit)} gp</span>
+													<br />
+													<span className="pr-1">Revenue:</span>
+													<span className="text-yellow-300 font-bold">{item.limit > 20 ? formatNumber(item.highAlch * 20) : formatNumber(item.highAlch * item.limit)} gp</span>
 												</span>
 											}
 										>
@@ -327,6 +459,9 @@ const AlchemyCalculator = () => {
 													<br />
 													<span className="pr-1">Cost:</span>
 													<span className="text-yellow-300 font-bold">{item.limit > 1200 ? formatNumber(item.buyPrice * 1200) : formatNumber(item.buyPrice * item.limit)} gp</span>
+													<br />
+													<span className="pr-1">Revenue:</span>
+													<span className="text-yellow-300 font-bold">{item.limit > 1200 ? formatNumber(item.highAlch * 1200) : formatNumber(item.highAlch * item.limit)} gp</span>
 												</span>
 											}
 										>
@@ -343,6 +478,9 @@ const AlchemyCalculator = () => {
 													<br />
 													<span className="pr-1">Cost:</span>
 													<span className="text-yellow-300 font-bold">{item.limit > 4800 ? formatNumber(item.buyPrice * 4800) : formatNumber(item.buyPrice * item.limit)} gp</span>
+													<br />
+													<span className="pr-1">Revenue:</span>
+													<span className="text-yellow-300 font-bold">{item.limit > 4800 ? formatNumber(item.highAlch * 4800) : formatNumber(item.highAlch * item.limit)} gp</span>
 												</span>
 											}
 										>
